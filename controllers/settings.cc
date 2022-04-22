@@ -229,8 +229,8 @@ Task<HttpResponsePtr> aru::settings::perform_preferences(HttpRequestPtr req, int
         mode_changed = current_favourite_mode != favourite_mode;
     }
 
-    if (request["favourite_relax"].isInt()) {
-        favourite_relax = (request["favourite_relax"].asInt() != 0);
+    if (request["favourite_relax"].isInt() || request["favourite_relax"].isBool()) {
+        favourite_relax = request["favourite_relax"].asBool();
         
         relax_changed = favourite_relax != current_favourite_relax;
     }
@@ -297,11 +297,11 @@ Task<HttpResponsePtr> aru::settings::perform_scoreboard(HttpRequestPtr req, int3
 
     const auto& row = result.front();
 
-    bool pref_changed = false;
+    bool scoreboard_changed = false;
     bool auto_classic_changed = false;
     bool auto_relax_changed = false;
 
-    aru::settings::preferences current_pref{
+    aru::settings::preferences current_scoreboard{
         row["scoreboard_display_classic"].as<bool>(),
         row["scoreboard_display_relax"].as<bool>(),
         row["score_overwrite_std"].as<bool>(),
@@ -314,14 +314,14 @@ Task<HttpResponsePtr> aru::settings::perform_scoreboard(HttpRequestPtr req, int3
     int32_t current_auto_classic = row["auto_last_classic"].as<int32_t>();
     int32_t current_auto_relax = row["auto_last_relax"].as<int32_t>();
 
-    aru::settings::preferences new_pref;
+    aru::settings::preferences new_scoreboard;
     int32_t auto_classic = 0;
     int32_t auto_relax = 0;
 
     if (request["preferences"].isInt()) {
-        new_pref = aru::settings::preferences(request["preferences"].asInt());
+        new_scoreboard = aru::settings::preferences(request["preferences"].asInt());
 
-        pref_changed = new_pref != current_pref;
+        scoreboard_changed = new_scoreboard != current_scoreboard;
     }
 
     if (request["auto_last_classic"].isInt()) {
@@ -338,21 +338,21 @@ Task<HttpResponsePtr> aru::settings::perform_scoreboard(HttpRequestPtr req, int3
         auto_relax_changed = auto_relax != current_auto_relax;
     }
 
-    if (!pref_changed && !auto_classic_changed && !auto_relax_changed) {
+    if (!scoreboard_changed && !auto_classic_changed && !auto_relax_changed) {
         co_return aru::utils::create_error(k304NotModified, "current values are the same");
     }
 
-    if (pref_changed) {
+    if (scoreboard_changed) {
         co_await db->execSqlCoro(
             "UPDATE users_preferences, users INNER JOIN users ON users_preferences.id = users.id "
             "SET scoreboard_display_classic = ?, scoreboard_display_relax = ?, "
             "auto_last_classic = ?, auto_last_relax = ?, "
             "score_overwrite_std = ?, score_overwrite_taiko = ?, score_overwrite_ctb = ?, score_overwrite_mania = ?, "
             "users.is_relax = ? WHERE users.id = ?;",
-            new_pref.scoreboard_display_classic, new_pref.scoreboard_display_relax,
+            new_scoreboard.scoreboard_display_classic, new_scoreboard.scoreboard_display_relax,
             auto_classic_changed ? auto_classic : current_auto_classic, auto_relax_changed ? auto_relax : current_auto_relax,
-            new_pref.score_overwrite_std, new_pref.score_overwrite_taiko, new_pref.score_overwrite_ctb, new_pref.score_overwrite_mania,
-            new_pref.is_relax, id
+            new_scoreboard.score_overwrite_std, new_scoreboard.score_overwrite_taiko, new_scoreboard.score_overwrite_ctb, new_scoreboard.score_overwrite_mania,
+            new_scoreboard.is_relax, id
         );
         co_return aru::utils::no_content();
     }

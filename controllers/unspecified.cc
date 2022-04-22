@@ -7,11 +7,11 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
     
     Json::Value leaderboard = Json::arrayValue;
     if (mode == 3 && is_relax) {
-        co_return HttpResponse::newHttpJsonResponse(leaderboard);
+        co_return aru::utils::create_error(k400BadRequest, "mania don't have relax mode");
     }
 
     const std::string database_name = is_relax ? "users_stats_relax" : "users_stats";
-    std::pair<uint32_t, uint32_t> pagination = aru::utils::paginate(page, length);
+    auto [offset, limit] = aru::utils::paginate(page, length);
 
     auto db = app().getDbClient();
     const auto& result = co_await db->execSqlCoro(
@@ -21,15 +21,12 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
         "avg_accuracy_std, avg_accuracy_taiko, avg_accuracy_ctb, avg_accuracy_mania, "
         "pp_std, pp_taiko, pp_ctb, pp_mania "
         "FROM users JOIN " + database_name + " ON users.id = " + database_name + ".id LIMIT ? OFFSET ?;",
-        pagination.second, pagination.first
+        limit, offset
     );
 
     if (result.empty()) {
         co_return HttpResponse::newHttpJsonResponse(leaderboard);
     }
-
-    // Workaround for GCC
-    typedef long long int64_t;
 
     for (const auto& row : result) {
         switch (mode) {
@@ -45,7 +42,7 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
                 user["id"] = row["id"].as<int32_t>();
                 user["username"] = row["username"].as<std::string>();
                 user["country"] = row["country"].as<std::string>();
-                user["ranked_score"] = score;
+                user["ranked_score"] = static_cast<Json::Int64>(score);
                 user["accuracy"] = row["avg_accuracy_std"].as<float>();
                 user["pp"] = row["pp_std"].as<int32_t>();
                 user["global_rank"] = position;
@@ -63,7 +60,7 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
                 user["id"] = row["id"].as<int32_t>();
                 user["username"] = row["username"].as<std::string>();
                 user["country"] = row["country"].as<std::string>();
-                user["ranked_score"] = score;
+                user["ranked_score"] = static_cast<Json::Int64>(score);
                 user["accuracy"] = row["avg_accuracy_taiko"].as<float>();
                 user["pp"] = row["pp_taiko"].as<int32_t>();
                 user["global_rank"] = position;
@@ -81,7 +78,7 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
                 user["id"] = row["id"].as<int32_t>();
                 user["username"] = row["username"].as<std::string>();
                 user["country"] = row["country"].as<std::string>();
-                user["ranked_score"] = score;
+                user["ranked_score"] = static_cast<Json::Int64>(score);
                 user["accuracy"] = row["avg_accuracy_ctb"].as<float>();
                 user["pp"] = row["pp_ctb"].as<int32_t>();
                 user["global_rank"] = position;
@@ -99,7 +96,7 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
                 user["id"] = row["id"].as<int32_t>();
                 user["username"] = row["username"].as<std::string>();
                 user["country"] = row["country"].as<std::string>();
-                user["ranked_score"] = score;
+                user["ranked_score"] = static_cast<Json::Int64>(score);
                 user["accuracy"] = row["avg_accuracy_mania"].as<float>();
                 user["pp"] = row["pp_mania"].as<int32_t>();
                 user["global_rank"] = position;

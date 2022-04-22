@@ -10,7 +10,7 @@ namespace aru {
         Task<HttpResponsePtr> leaderboard(HttpRequestPtr req);
 
         METHOD_LIST_BEGIN
-            ADD_METHOD_TO(unspecified::leaderboard, "/leaderboard", Get);
+            ADD_METHOD_TO(unspecified::leaderboard, "/v1/leaderboard", Get);
         METHOD_LIST_END
     };
 }

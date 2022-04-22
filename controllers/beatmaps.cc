@@ -9,6 +9,7 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmapset(HttpRequestPtr req, int
         "artist, title, difficulty_name, creator, "
         "count_normal, count_slider, count_spinner, "
         "max_combo, ranked_status, latest_update, bpm, hit_length, "
+        "difficulty_std, difficulty_taiko, difficulty_ctb, difficulty_mania, "
         "mode, cs, ar, od, hp "
         "FROM beatmaps WHERE beatmapset_id = ? LIMIT 1;", id
     );
@@ -17,9 +18,6 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmapset(HttpRequestPtr req, int
     if (result.empty()) {
         co_return HttpResponse::newHttpJsonResponse(beatmaps);
     }
-
-    // Workaround for GCC
-    typedef long long int64_t;
 
     for (const auto& row : result) {
         Json::Value beatmap = Json::objectValue;
@@ -37,7 +35,7 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmapset(HttpRequestPtr req, int
         beatmap["max_combo"]        = row["max_combo"].as<int32_t>();
         beatmap["ranked_status"]    = row["ranked_status"].as<int32_t>();
         beatmap["latest_update"]    = aru::utils::time_to_string(row["latest_update"].as<int64_t>());
-        beatmap["bpm"]              = row["bpm"].as<int64_t>();
+        beatmap["bpm"]              = static_cast<Json::Int64>(row["bpm"].as<int64_t>());
         beatmap["hit_length"]       = row["hit_length"].as<int32_t>();
 
         const int32_t mode = row["mode"].as<int32_t>();
@@ -80,17 +78,15 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmap(HttpRequestPtr req, int32_
         "artist, title, difficulty_name, creator, "
         "count_normal, count_slider, count_spinner, "
         "max_combo, ranked_status, latest_update, bpm, hit_length, "
+        "difficulty_std, difficulty_taiko, difficulty_ctb, difficulty_mania, "
         "mode, cs, ar, od, hp "
         "FROM beatmaps WHERE beatmap_id = ? LIMIT 1;", id
     );
     Json::Value beatmap = Json::objectValue;
 
     if (result.empty()) {
-        co_return HttpResponse::newHttpJsonResponse(beatmap);
+        co_return aru::utils::create_error(k404NotFound, "beatmap not found");
     }
-
-    // Workaround for GCC
-    typedef long long int64_t;
 
     const auto& row = result.front();
     beatmap["beatmap_id"]       = row["beatmap_id"].as<int32_t>();
@@ -106,7 +102,7 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmap(HttpRequestPtr req, int32_
     beatmap["max_combo"]        = row["max_combo"].as<int32_t>();
     beatmap["ranked_status"]    = row["ranked_status"].as<int32_t>();
     beatmap["latest_update"]    = aru::utils::time_to_string(row["latest_update"].as<int64_t>());
-    beatmap["bpm"]              = row["bpm"].as<int64_t>();
+    beatmap["bpm"]              = static_cast<Json::Int64>(row["bpm"].as<int64_t>());
     beatmap["hit_length"]       = row["hit_length"].as<int32_t>();
 
     const int32_t mode = row["mode"].as<int32_t>();
@@ -141,6 +137,7 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmap(HttpRequestPtr req, int32_
 
 Task<HttpResponsePtr> aru::beatmaps::beatmap_leaderboard(HttpRequestPtr req, int32_t id) {
     auto [mode, is_relax, page, length] = aru::utils::get_parameters<int32_t, bool, uint32_t, uint32_t>(req->getParameters(), "mode", "relax", "page", "length");
+    aru::utils::sanitize(mode, 0, 3, 0);
 
     if (mode == 3 && is_relax) {
         co_return aru::utils::create_error(k400BadRequest, "mania don't have relax mode");
@@ -161,44 +158,99 @@ Task<HttpResponsePtr> aru::beatmaps::beatmap_leaderboard(HttpRequestPtr req, int
         beatmap_md5 = row["beatmap_md5"].as<std::string>();
     }
 
-    std::pair<uint32_t, uint32_t> pagination = aru::utils::paginate(page, length);
     const auto& result = co_await db->execSqlCoro(
         "SELECT user_id, ranking, username, country, "
-        "score, pp, accuracy, count_300, count_100, count_50, count_misses, max_combo, mods "
-        "FROM scores WHERE beatmap_md5 = ? AND is_relax = ? AND mode = ? AND completed = ? LIMIT ? OFFSET ? ; ",
-        beatmap_md5, is_relax, mode, true, pagination.second, pagination.first
+        "hash, score, pp, accuracy, count_300, count_100, count_50, count_misses, max_combo, mods "
+        "FROM scores JOIN users ON scores.user_id = users.id "
+        "WHERE beatmap_md5 = ? AND scores.is_relax = ? AND scores.play_mode = ? AND completed = ?;",
+        beatmap_md5, is_relax, mode, true
     );
 
     if (result.empty()) {
-        co_return aru::utils::create_error(k404NotFound, "beatmap not found");
+        Json::Value leaderboard_ = Json::arrayValue;
+        co_return HttpResponse::newHttpJsonResponse(leaderboard_);
     }
 
-    // Workaround for GCC
-    typedef long long int64_t;
+    std::vector<leaderboard_beatmap> leaderboard {};
 
-    Json::Value leaderboard = Json::arrayValue;
     for (const auto& row : result) {
-        Json::Value score;
-        score["user_id"] = row["user_id"].as<int32_t>();
-        score["rank"] = row["ranking"].as<int32_t>();
-        score["username"] = row["username"].as<std::string>();
-        score["country"] = row["country"].as<std::string>();
-        score["score"] = row["score"].as<int64_t>();
-        score["pp"] = row["pp"].as<int32_t>();
-        score["accuracy"] = row["accuracy"].as<double>();
-        score["count_300"] = row["count_300"].as<int32_t>();
-        score["count_100"] = row["count_100"].as<int32_t>();
-        score["count_50"] = row["count_50"].as<int32_t>();
-        score["count_miss"] = row["count_misses"].as<int32_t>();
-        score["max_combo"] = row["max_combo"].as<int32_t>();
-        score["mods"] = row["mods"].as<int64_t>();
-        leaderboard.append(score);
+        leaderboard_beatmap score;
+
+        score.user_id = row["user_id"].as<int32_t>();
+        score.rank = row["ranking"].as<std::string>();
+        score.hash = row["hash"].as<std::string>();
+        score.username = row["username"].as<std::string>();
+        score.country = row["country"].as<std::string>();
+        score.score = row["score"].as<int64_t>();
+        score.pp = row["pp"].as<float>();
+        score.accuracy = row["accuracy"].as<float>();
+        score.count_300 = row["count_300"].as<int32_t>();
+        score.count_100 = row["count_100"].as<int32_t>();
+        score.count_50 = row["count_50"].as<int32_t>();
+        score.count_miss = row["count_misses"].as<int32_t>();
+        score.max_combo = row["max_combo"].as<int32_t>();
+        score.mods = row["mods"].as<int64_t>();
+
+        leaderboard.push_back(std::move(score));
     }
 
-    co_return HttpResponse::newHttpJsonResponse(leaderboard);
+    leaderboard.erase(std::remove_if(leaderboard.begin(), leaderboard.end(), [&](const leaderboard_beatmap& this_) {
+        for (const leaderboard_beatmap& that_ : leaderboard) {
+            if (this_.hash == that_.hash) {
+                continue;
+            }
+
+            if (this_.user_id == that_.user_id && that_.score > this_.score) {
+                return true;
+            }
+        }
+
+        return false;
+    }), leaderboard.end());
+
+    Json::Value response = Json::arrayValue;
+    auto [offset, limit] = aru::utils::paginate(page, length);
+
+    if (leaderboard.size() <= offset) {
+        co_return HttpResponse::newHttpJsonResponse(response);
+    }
+
+    std::sort(leaderboard.begin(), leaderboard.end(), [](const leaderboard_beatmap& left, const leaderboard_beatmap& right) { return left.score > right.score; });
+
+    for (uint32_t i = offset; i < offset + limit && i < leaderboard.size(); i++) {
+        Json::Value score;
+        leaderboard_beatmap& this_ = leaderboard.at(i);
+
+        score["user_id"] = this_.user_id;
+        score["ranking"] = this_.rank;
+        score["hash"] = this_.hash;
+        score["username"] = this_.username;
+        score["country"] = this_.country;
+        score["score"] = this_.score;
+        score["pp"] = this_.pp;
+        score["accuracy"] = this_.accuracy;
+        score["count_300"] = this_.count_300;
+        score["count_100"] = this_.count_100;
+        score["count_50"] = this_.count_50;
+        score["count_misses"] = this_.count_miss;
+        score["max_combo"] = this_.max_combo;
+        score["mods"] = this_.mods;
+
+        response.append(score);
+    }
+
+    co_return HttpResponse::newHttpJsonResponse(response);
 }
 
-Task<HttpResponsePtr> aru::beatmaps::perform_ranking(HttpRequestPtr req, int32_t id) {
+Task<HttpResponsePtr> aru::beatmaps::ranking_set(HttpRequestPtr req, int32_t id) {
+    co_return co_await aru::beatmaps::perform_ranking(req, id, true);
+}
+
+Task<HttpResponsePtr> aru::beatmaps::ranking_map(HttpRequestPtr req, int32_t id) {
+    co_return co_await aru::beatmaps::perform_ranking(req, id, false);
+}
+
+Task<HttpResponsePtr> aru::beatmaps::perform_ranking(HttpRequestPtr req, int32_t id, bool is_set) {
     // TODO: Implement it when direct will be fully done
     co_return aru::utils::create_error(k501NotImplemented, "currently not implemented");
 }

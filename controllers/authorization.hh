@@ -11,8 +11,8 @@ namespace aru {
         Task<HttpResponsePtr> register_user (HttpRequestPtr req);
 
         METHOD_LIST_BEGIN
-            ADD_METHOD_TO(authorization::authorize_user, "/login", Post);
-            ADD_METHOD_TO(authorization::register_user, "/register", Post);
+            ADD_METHOD_TO(authorization::authorize_user, "/v1/login", Post);
+            ADD_METHOD_TO(authorization::register_user, "/v1/register", Post);
         METHOD_LIST_END
     };
 }

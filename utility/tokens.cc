@@ -7,7 +7,7 @@ drogon::Task<std::shared_ptr<aru::token_container>> aru::tokens::handle_authoriz
     std::string token;
 
     if ((token = req_->getHeader("Authorization")).empty()) {
-        if ((token = req_->getCookie("hat")).empty()) {
+        if ((token = req_->getCookie("yukime_session")).empty()) {
             co_return {};
         }
     }
@@ -26,9 +26,6 @@ drogon::Task<std::shared_ptr<aru::token_container>> aru::tokens::authorize_throu
     if (record.empty()) {
         co_return {};
     }
-
-    // Workaround for GCC
-    typedef long long int64_t;
 
     const auto& result = record.front();
     co_return std::make_shared<aru::token_container>(result["user_id"].as<int32_t>(), result["permissions"].as<int64_t>(), token_, result["token"].as<std::string>());

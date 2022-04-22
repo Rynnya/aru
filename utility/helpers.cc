@@ -180,7 +180,7 @@ std::string aru::utils::time_to_string(int64_t time_) {
 
 std::pair<uint32_t, uint32_t> aru::utils::paginate(uint32_t page_, uint32_t length_) {
     page_ = std::max(page_, 1u);
-    length_ = std::clamp(length_, 1u, 100u);
+    aru::utils::sanitize(length_, 1u, 100u, 50u);
 
     uint32_t start_pos = (page_ - 1) * length_;
     return { start_pos, length_ };

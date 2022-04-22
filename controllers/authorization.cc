@@ -75,7 +75,7 @@ Task<HttpResponsePtr> aru::authorization::authorize_user(HttpRequestPtr req) {
     }
 
     if (aru::utils::create_sha512(aru::utils::create_md5(password), salt) != password_hash) {
-        co_return aru::utils::create_error(k401Unauthorized, "wrong login");
+        co_return aru::utils::create_error(k403Forbidden, "wrong login");
     }
 
     db->execSqlAsync(
@@ -92,8 +92,10 @@ Task<HttpResponsePtr> aru::authorization::authorize_user(HttpRequestPtr req) {
 
         const auto& result = co_await db->execSqlCoro("SELECT id FROM tokens WHERE token = ? LIMIT 1;", md5_token);
         if (result.empty()) {
-            db->execSqlCoro(
+            db->execSqlAsync(
                 "INSERT INTO tokens SET (user_id, token, private, permissions, last_updated) VALUES (?, ?, ?, ?, ?)",
+                [](const drogon::orm::Result&) {},
+                [](const drogon::orm::DrogonDbException&) {},
                 user_id, md5_token, true, 0, aru::utils::get_epoch_time()
             );
             break;
@@ -209,8 +211,10 @@ Task<HttpResponsePtr> aru::authorization::register_user(HttpRequestPtr req) {
 
         const auto& result = co_await db->execSqlCoro("SELECT id FROM tokens WHERE token = ? LIMIT 1;", md5_token);
         if (result.empty()) {
-            db->execSqlCoro(
+            db->execSqlAsync(
                 "INSERT INTO tokens SET (user_id, token, private, permissions, last_updated) VALUES (?, ?, ?, ?, ?);",
+                [](const drogon::orm::Result&) {},
+                [](const drogon::orm::DrogonDbException&) {},
                 user_id, md5_token, true, 0, aru::utils::get_epoch_time()
             );
             break;

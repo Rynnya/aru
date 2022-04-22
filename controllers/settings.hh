@@ -15,7 +15,7 @@ namespace aru {
         Task<HttpResponsePtr> retreave_status       (HttpRequestPtr req, int32_t id);
         Task<HttpResponsePtr> perform_status        (HttpRequestPtr req, int32_t id);
 
-        // retreave_avatar can be done by using https://a.yukime.ml/{id}
+        // retreave_avatar can be done by using https://a.example.com/{id}
         Task<HttpResponsePtr> perform_avatar        (HttpRequestPtr req, int32_t id);
         Task<HttpResponsePtr> delete_avatar         (HttpRequestPtr req, int32_t id);
 
@@ -25,20 +25,20 @@ namespace aru {
         Task<HttpResponsePtr> perform_password      (HttpRequestPtr req, int32_t id);
 
         METHOD_LIST_BEGIN
-            ADD_METHOD_TO(settings::retreave_settings, "/users/{1}/settings", Get);
+            ADD_METHOD_TO(settings::retreave_settings, "/v1/users/{1}/settings", Get);
 
-            ADD_METHOD_TO(settings::retreave_userpage, "/users/{1}/settings/userpage", Get);
-            ADD_METHOD_TO(settings::perform_userpage, "/users/{1}/settings/userpage", Put);
+            ADD_METHOD_TO(settings::retreave_userpage, "/v1/users/{1}/settings/userpage", Get);
+            ADD_METHOD_TO(settings::perform_userpage, "/v1/users/{1}/settings/userpage", Put);
 
-            ADD_METHOD_TO(settings::retreave_status, "/users/{1}/settings/status", Get);
-            ADD_METHOD_TO(settings::perform_status, "/users/{1}/settings/status", Put);
+            ADD_METHOD_TO(settings::retreave_status, "/v1/users/{1}/settings/status", Get);
+            ADD_METHOD_TO(settings::perform_status, "/v1/users/{1}/settings/status", Put);
 
-            ADD_METHOD_TO(settings::perform_avatar, "/users/{1}/settings/avatar", Post);
-            ADD_METHOD_TO(settings::delete_avatar, "/users/{1}/settings/avatar", Delete);
+            ADD_METHOD_TO(settings::perform_avatar, "/v1/users/{1}/settings/avatar", Post);
+            ADD_METHOD_TO(settings::delete_avatar, "/v1/users/{1}/settings/avatar", Delete);
             
-            ADD_METHOD_TO(settings::perform_preferences, "/users/{1}/settings/preferences", Put);
-            ADD_METHOD_TO(settings::perform_scoreboard, "/users/{1}/settings/scoreboard", Put);
-            ADD_METHOD_TO(settings::perform_password, "/users/{1}/settings/password", Put);
+            ADD_METHOD_TO(settings::perform_preferences, "/v1/users/{1}/settings/preferences", Put);
+            ADD_METHOD_TO(settings::perform_scoreboard, "/v1/users/{1}/settings/scoreboard", Put);
+            ADD_METHOD_TO(settings::perform_password, "/v1/users/{1}/settings/password", Put);
         METHOD_LIST_END
     private:
         class preferences {
