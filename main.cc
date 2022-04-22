@@ -2,12 +2,13 @@
 
 #include "utility/helpers.hh"
 
+namespace error_types {
+    constexpr char method_not_allowed[] = "this method not allowed";
+    constexpr char unhandled_error[] = "unhandled error, please report me";
+}
+
 drogon::HttpResponsePtr error_handler(drogon::HttpStatusCode code) {
-    auto response = drogon::HttpResponse::newHttpResponse();
-    response->setContentTypeCodeAndCustomString(drogon::ContentType::CT_TEXT_PLAIN, "text/plain; charset=utf-8");
-    response->setBody("unhandled error, please report me");
-    response->setStatusCode(code);
-    return response;
+    return aru::utils::create_error(code, code == drogon::k405MethodNotAllowed ? error_types::method_not_allowed : error_types::unhandled_error);
 }
 
 void default_handler(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr &)>&& callback) {
@@ -21,14 +22,24 @@ void default_handler(const drogon::HttpRequestPtr& req, std::function<void(const
 };
 
 void favicon_handler(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr &)>&& callback) {
-    drogon::HttpResponsePtr response = drogon::HttpResponse::newHttpResponse();
-    response->setStatusCode(drogon::k204NoContent);
-    response->setBody("");
-    callback(response);
+    callback(aru::utils::no_content());
+}
+
+void cors_handler(const drogon::HttpRequestPtr& req, const drogon::HttpResponsePtr& resp) {
+    resp->addHeader("Access-Control-Allow-Origin", "*");
+}
+
+void main_callback() {
+    for (auto& listener : drogon::app().getListeners()) {
+        LOG_INFO << "Listening on " << listener.toIp() << ":" << listener.toPort();
+    }
 }
 
 int main() {
     drogon::app()
+        .setFloatPrecisionInJson(2, "decimal")
+        .registerBeginningAdvice(main_callback)
+        .registerPostHandlingAdvice(cors_handler)
         .setCustomErrorHandler(error_handler)
         .setDefaultHandler(default_handler)
         .registerHandler("/favicon.ico", &favicon_handler)
@@ -45,13 +56,6 @@ int main() {
         "ttobas", "velperk", "jakads", "jhlee0133", "abcdullah", "yuko-", "entozer", "hdhr", "ekoro", "snowwhite", "osuplayer111", "musty", "nero", "elysion",
         "ztrot", "koreapenguin", "fort", "asphyxia", "niko", "shigetora", "whitecat", "fokabot", "himitsu", "nebula", "howl", "nyo", "angelwar", "mm00", "yukime" }
     );
-
-    std::thread([] {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        for (auto& listener : drogon::app().getListeners()) {
-            LOG_INFO << "Listening on " << listener.toIp() << ":" << listener.toPort();
-        }
-    }).detach();
 
     drogon::app().run();
 }
