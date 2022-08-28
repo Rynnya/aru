@@ -3,27 +3,32 @@
 #include "../utility/helpers.hh"
 
 Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
-    auto [mode, is_relax, page, length] = aru::utils::get_parameters<int32_t, bool, uint32_t, uint32_t>(req->getParameters(), "mode", "relax", "page", "length");
-    
-    Json::Value leaderboard = Json::arrayValue;
-    if (mode == 3 && is_relax) {
-        co_return aru::utils::create_error(k400BadRequest, "mania don't have relax mode");
-    }
-
-    const std::string database_name = is_relax ? "users_stats_relax" : "users_stats";
-    auto [offset, limit] = aru::utils::paginate(page, length);
-
-    auto db = app().getDbClient();
-    const auto& result = co_await db->execSqlCoro(
+    static constexpr const char classic_query[] = 
         "SELECT users.id, username, country, "
         "rank_std, rank_taiko, rank_ctb, rank_mania, "
         "ranked_score_std, ranked_score_taiko, ranked_score_ctb, ranked_score_mania, "
         "avg_accuracy_std, avg_accuracy_taiko, avg_accuracy_ctb, avg_accuracy_mania, "
         "pp_std, pp_taiko, pp_ctb, pp_mania "
-        "FROM users JOIN " + database_name + " ON users.id = " + database_name + ".id LIMIT ? OFFSET ?;",
-        limit, offset
-    );
+        "FROM users JOIN users_stats ON users.id = users_stats.id LIMIT ? OFFSET ?;";
+    static constexpr const char relax_query[] =
+        "SELECT users.id, username, country, "
+        "rank_std, rank_taiko, rank_ctb, "
+        "ranked_score_std, ranked_score_taiko, ranked_score_ctb, "
+        "avg_accuracy_std, avg_accuracy_taiko, avg_accuracy_ctb, "
+        "pp_std, pp_taiko, pp_ctb "
+        "FROM users JOIN users_stats_relax ON users.id = users_stats_relax.id LIMIT ? OFFSET ?;";
 
+    auto [mode, is_relax, page, length] = aru::utils::get_parameters<int32_t, bool, uint32_t, uint32_t>(req->getParameters(), "mode", "relax", "page", "length");
+    
+    if (mode == 3 && is_relax) {
+        co_return aru::utils::create_error(k400BadRequest, "mania don't have relax mode");
+    }
+
+    auto [offset, limit] = aru::utils::paginate(page, length);
+    auto db = app().getDbClient();
+    const auto result = co_await db->execSqlCoro(is_relax ? relax_query : classic_query, limit, offset);
+
+    Json::Value leaderboard { Json::arrayValue };
     if (result.empty()) {
         co_return HttpResponse::newHttpJsonResponse(leaderboard);
     }
@@ -38,7 +43,7 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
                     continue;
                 }
 
-                Json::Value user = Json::objectValue;
+                Json::Value user { Json::objectValue };
                 user["id"] = row["id"].as<int32_t>();
                 user["username"] = row["username"].as<std::string>();
                 user["country"] = row["country"].as<std::string>();
@@ -56,7 +61,7 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
                     continue;
                 }
 
-                Json::Value user = Json::objectValue;
+                Json::Value user { Json::objectValue };
                 user["id"] = row["id"].as<int32_t>();
                 user["username"] = row["username"].as<std::string>();
                 user["country"] = row["country"].as<std::string>();
@@ -74,7 +79,7 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
                     continue;
                 }
 
-                Json::Value user = Json::objectValue;
+                Json::Value user { Json::objectValue };
                 user["id"] = row["id"].as<int32_t>();
                 user["username"] = row["username"].as<std::string>();
                 user["country"] = row["country"].as<std::string>();
@@ -92,7 +97,7 @@ Task<HttpResponsePtr> aru::unspecified::leaderboard(HttpRequestPtr req) {
                     continue;
                 }
 
-                Json::Value user = Json::objectValue;
+                Json::Value user { Json::objectValue };
                 user["id"] = row["id"].as<int32_t>();
                 user["username"] = row["username"].as<std::string>();
                 user["country"] = row["country"].as<std::string>();

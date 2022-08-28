@@ -18,7 +18,7 @@ drogon::Task<std::shared_ptr<aru::token_container>> aru::tokens::handle_authoriz
 drogon::Task<std::shared_ptr<aru::token_container>> aru::tokens::authorize_through_token(std::string token_) {
     auto db = drogon::app().getDbClient();
 
-    const auto& record = co_await db->execSqlCoro(
+    const auto record = co_await db->execSqlCoro(
         "SELECT user_id, permissions, token FROM tokens WHERE token = ? AND last_updated + 1209600 > ?;", 
         aru::utils::create_md5(token_), aru::utils::get_epoch_time()
     );

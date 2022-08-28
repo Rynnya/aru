@@ -13,7 +13,7 @@ Task<HttpResponsePtr> aru::settings::retreave_settings(HttpRequestPtr req, int32
     }
 
     auto db = drogon::app().getDbClient();
-    auto result = co_await db->execSqlCoro(
+    const auto result = co_await db->execSqlCoro(
         "SELECT users.id, users.favourite_mode, users.favourite_relax, users.play_style, users.is_relax, "
         "users_preferences.scoreboard_display_classic, users_preferences.scoreboard_display_relax, "
         "users_preferences.auto_last_classic, users_preferences.auto_last_relax, "
@@ -27,8 +27,8 @@ Task<HttpResponsePtr> aru::settings::retreave_settings(HttpRequestPtr req, int32
     }
 
     const auto& settings = result.front();
-    Json::Value body = Json::objectValue;
-    Json::Value score = Json::objectValue;
+    Json::Value body { Json::objectValue };
+    Json::Value score { Json::objectValue };
 
     body["id"]              = settings["id"].as<int32_t>();
     body["submode"]         = static_cast<int32_t>(settings["is_relax"].as<bool>());
@@ -52,14 +52,14 @@ Task<HttpResponsePtr> aru::settings::retreave_settings(HttpRequestPtr req, int32
 
 Task<HttpResponsePtr> aru::settings::retreave_userpage(HttpRequestPtr req, int32_t id) {
     auto db = drogon::app().getDbClient();
-    auto result = co_await db->execSqlCoro("SELECT userpage FROM users WHERE id = ? LIMIT 1;", id);
+    const auto result = co_await db->execSqlCoro("SELECT userpage FROM users WHERE id = ? LIMIT 1;", id);
 
     if (result.empty()) {
         co_return aru::utils::create_error(k404NotFound, "user not found");
     }
 
     auto userpage = result.front();
-    Json::Value body = Json::objectValue;
+    Json::Value body { Json::objectValue };
     body["user_id"] = id;
     body["userpage"] = userpage["userpage"].as<std::string>();
 
@@ -78,7 +78,7 @@ Task<HttpResponsePtr> aru::settings::perform_userpage(HttpRequestPtr req, int32_
         co_return aru::utils::create_error(k400BadRequest, "invalid json body");
     }
 
-    auto request = *body;
+    const auto& request = *body;
 
     if (!request["userpage"].isString()) {
         co_return aru::utils::create_error(k400BadRequest, "missing required parameters (userpage)");
@@ -94,14 +94,14 @@ Task<HttpResponsePtr> aru::settings::perform_userpage(HttpRequestPtr req, int32_
 
 Task<HttpResponsePtr> aru::settings::retreave_status(HttpRequestPtr req, int32_t id) {
     auto db = drogon::app().getDbClient();
-    auto result = co_await db->execSqlCoro("SELECT status FROM users WHERE id = ? LIMIT 1;", id);
+    const auto result = co_await db->execSqlCoro("SELECT status FROM users WHERE id = ? LIMIT 1;", id);
 
     if (result.empty()) {
         co_return aru::utils::create_error(k404NotFound, "user not found");
     }
 
     auto userpage = result.front();
-    Json::Value body = Json::objectValue;
+    Json::Value body { Json::objectValue };
 
     body["user_id"] = id;
     body["status"] = userpage["status"].as<std::string>();
@@ -121,7 +121,7 @@ Task<HttpResponsePtr> aru::settings::perform_status(HttpRequestPtr req, int32_t 
         co_return aru::utils::create_error(k400BadRequest, "invalid json body");
     }
 
-    auto request = *body;
+    const auto& request = *body;
 
     if (!request["status"].isString()) {
         co_return aru::utils::create_error(k400BadRequest, "missing required parameters (status)");
@@ -212,7 +212,7 @@ Task<HttpResponsePtr> aru::settings::perform_preferences(HttpRequestPtr req, int
     auto db = app().getDbClient();
     auto request = *body;
 
-    const auto& result = co_await db->execSqlCoro("SELECT favourite_mode, favourite_relax, play_style FROM users WHERE id = ? LIMIT 1;", id);
+    const auto result = co_await db->execSqlCoro("SELECT favourite_mode, favourite_relax, play_style FROM users WHERE id = ? LIMIT 1;", id);
     if (result.empty()) {
         co_return aru::utils::create_error(k404NotFound, "user not found, somehow");
     }
@@ -282,9 +282,9 @@ Task<HttpResponsePtr> aru::settings::perform_scoreboard(HttpRequestPtr req, int3
     }
 
     auto db = app().getDbClient();
-    auto request = *body;
+    const auto& request = *body;
 
-    const auto& result = co_await db->execSqlCoro(
+    const auto result = co_await db->execSqlCoro(
         "SELECT users.id, users.is_relax"
         "scoreboard_display_classic, scoreboard_display_relax, "
         "auto_last_classic, auto_last_relax, "
@@ -301,7 +301,7 @@ Task<HttpResponsePtr> aru::settings::perform_scoreboard(HttpRequestPtr req, int3
     bool auto_classic_changed = false;
     bool auto_relax_changed = false;
 
-    aru::settings::preferences current_scoreboard{
+    aru::settings::preferences current_scoreboard {
         row["scoreboard_display_classic"].as<bool>(),
         row["scoreboard_display_relax"].as<bool>(),
         row["score_overwrite_std"].as<bool>(),
@@ -393,7 +393,7 @@ Task<HttpResponsePtr> aru::settings::perform_password(HttpRequestPtr req, int32_
     }
 
     auto db = app().getDbClient();
-    const auto& result = co_await db->execSqlCoro("SELECT password_hash, salt FROM users WHERE id = ? LIMIT 1;", id);
+    const auto result = co_await db->execSqlCoro("SELECT password_hash, salt FROM users WHERE id = ? LIMIT 1;", id);
     if (result.empty()) {
         co_return aru::utils::create_error(k404NotFound, "user not found, somehow");
     }

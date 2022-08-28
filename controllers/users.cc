@@ -5,16 +5,7 @@
 #include <drogon/HttpClient.h>
 
 Task<HttpResponsePtr> aru::users::retreave_metadata(HttpRequestPtr req, int32_t id) {
-    auto [mode, is_relax] = aru::utils::get_parameters<int32_t, bool>(req->getParameters(), "mode", "relax");
-
-    if (mode == 3 && is_relax) {
-        co_return aru::utils::create_error(k400BadRequest, "mania don't have relax mode");
-    }
-
-    const std::string database_name = is_relax ? "users_stats_relax" : "users_stats";
-    auto db = app().getDbClient();
-
-    const auto& result = co_await db->execSqlCoro(
+    static constexpr const char classic_query[] = 
         "SELECT users.id, username, country, "
         "status, favourite_mode, favourite_relax, "
         "rank_std, rank_taiko, rank_ctb, rank_mania, "
@@ -22,15 +13,32 @@ Task<HttpResponsePtr> aru::users::retreave_metadata(HttpRequestPtr req, int32_t 
         "avg_accuracy_std, avg_accuracy_taiko, avg_accuracy_ctb, avg_accuracy_mania, "
         "pp_std, pp_taiko, pp_ctb, pp_mania "
         "play_count_std, play_count_taiko, play_count_ctb, play_count_mania "
-        "FROM users JOIN " + database_name + " ON users.id = " + database_name + ".id WHERE users.is_public = true AND users.id = ? LIMIT 1;", id
-    );
+        "FROM users JOIN users_stats ON users.id = users_stats.id WHERE users.is_public = true AND users.id = ? LIMIT 1;";
+    static constexpr const char relax_query[] = 
+        "SELECT users.id, username, country, "
+        "status, favourite_mode, favourite_relax, "
+        "rank_std, rank_taiko, rank_ctb, "
+        "ranked_score_std, ranked_score_taiko, ranked_score_ctb, "
+        "avg_accuracy_std, avg_accuracy_taiko, avg_accuracy_ctb, "
+        "pp_std, pp_taiko, pp_ctb, "
+        "play_count_std, play_count_taiko, play_count_ctb "
+        "FROM users JOIN users_stats_relax ON users.id = users_stats_relax.id WHERE users.is_public = true AND users.id = ? LIMIT 1;";
+
+    auto [mode, is_relax] = aru::utils::get_parameters<int32_t, bool>(req->getParameters(), "mode", "relax");
+
+    if (mode == 3 && is_relax) {
+        co_return aru::utils::create_error(k400BadRequest, "mania don't have relax mode");
+    }
+
+    auto db = app().getDbClient();
+    const auto result = co_await db->execSqlCoro(is_relax ? relax_query : classic_query, id);
 
     if (result.empty()) {
         co_return aru::utils::create_error(k404NotFound, "user not found");
     }
 
     const auto& row = result.front();
-    Json::Value metadata = Json::objectValue;
+    Json::Value metadata { Json::objectValue };
 
     metadata["id"] = row["id"].as<int32_t>();
     metadata["username"] = row["username"].as<std::string>();
@@ -79,16 +87,7 @@ Task<HttpResponsePtr> aru::users::retreave_metadata(HttpRequestPtr req, int32_t 
 }
 
 Task<HttpResponsePtr> aru::users::retreave_full_metadata(HttpRequestPtr req, int32_t id) {
-    auto [mode, is_relax] = aru::utils::get_parameters<int32_t, bool>(req->getParameters(), "mode", "relax");
-
-    if (mode == 3 && is_relax) {
-        co_return aru::utils::create_error(k400BadRequest, "mania don't have relax mode");
-    }
-
-    const std::string database_name = is_relax ? "users_stats_relax" : "users_stats";
-    auto db = app().getDbClient();
-
-    const auto& result = co_await db->execSqlCoro(
+    static constexpr const char classic_query[] = 
         "SELECT users.id, username, country, registration_date, latest_activity, "
         "status, favourite_mode, favourite_relax, play_style, "
         "rank_std, rank_taiko, rank_ctb, rank_mania, "
@@ -106,15 +105,42 @@ Task<HttpResponsePtr> aru::users::retreave_full_metadata(HttpRequestPtr req, int
         "count_SH_std, count_SH_taiko, count_SH_ctb, count_SH_mania, "
         "count_X_std, count_X_taiko, count_X_ctb, count_X_mania, "
         "count_XH_std, count_XH_taiko, count_XH_ctb, count_XH_mania "
-        "FROM users JOIN " + database_name + " ON users.id = " + database_name + ".id WHERE users.is_public = true AND users.id = ? LIMIT 1;", id
-    );
+        "FROM users JOIN users_stats ON users.id = users_stats.id WHERE users.is_public = true AND users.id = ? LIMIT 1;";
+    static constexpr const char relax_query[] = 
+        "SELECT users.id, username, country, registration_date, latest_activity, "
+        "status, favourite_mode, favourite_relax, play_style, "
+        "rank_std, rank_taiko, rank_ctb, "
+        "ranked_score_std, ranked_score_taiko, ranked_score_ctb, "
+        "total_score_std, total_score_taiko, total_score_ctb, "
+        "play_count_std, play_count_taiko, play_count_ctb, "
+        "total_hits_std, total_hits_taiko, total_hits_ctb, "
+        "max_combo_std, max_combo_taiko, max_combo_ctb, "
+        "play_time_std, play_time_taiko, play_time_ctb, "
+        "avg_accuracy_std, avg_accuracy_taiko, avg_accuracy_ctb, "
+        "pp_std, pp_taiko, pp_ctb, "
+        "play_count_std, play_count_taiko, play_count_ctb, "
+        "count_A_std, count_A_taiko, count_A_ctb, "
+        "count_S_std, count_S_taiko, count_S_ctb, "
+        "count_SH_std, count_SH_taiko, count_SH_ctb, "
+        "count_X_std, count_X_taiko, count_X_ctb, "
+        "count_XH_std, count_XH_taiko, count_XH_ctb "
+        "FROM users JOIN users_stats ON users.id = users_stats.id WHERE users.is_public = true AND users.id = ? LIMIT 1;";
+
+    auto [mode, is_relax] = aru::utils::get_parameters<int32_t, bool>(req->getParameters(), "mode", "relax");
+
+    if (mode == 3 && is_relax) {
+        co_return aru::utils::create_error(k400BadRequest, "mania don't have relax mode");
+    }
+
+    auto db = app().getDbClient();
+    const auto result = co_await db->execSqlCoro(is_relax ? relax_query : classic_query, id);
 
     if (result.empty()) {
         co_return aru::utils::create_error(k404NotFound, "user not found");
     }
 
     const auto& row = result.front();
-    Json::Value metadata = Json::objectValue;
+    Json::Value metadata { Json::objectValue };
 
     metadata["id"] = row["id"].as<int32_t>();
     metadata["username"] = row["username"].as<std::string>();
@@ -216,14 +242,11 @@ Task<HttpResponsePtr> aru::users::retreave_best_scores(HttpRequestPtr req, int32
     auto db = app().getDbClient();
 
     // Verify if user isn't banned or restricted
-    {
-        const auto& result = co_await db->execSqlCoro("SELECT is_public FROM users WHERE id = ? AND is_public = 1;", id);
-        if (result.empty()) {
-            co_return aru::utils::create_error(k404NotFound, "user not found");
-        }
+    if ((co_await db->execSqlCoro("SELECT is_public FROM users WHERE id = ? AND is_public = 1;", id)).empty()) {
+        co_return aru::utils::create_error(k404NotFound, "user not found");
     }
     
-    const auto& result = co_await db->execSqlCoro(
+    const auto result = co_await db->execSqlCoro(
         "SELECT scores.id, user_id, hash, ranking, score, scores.max_combo as user_max_combo, full_combo, mods, "
         "count_300, count_100, count_50, count_gekis, count_katus, count_misses, "
         "time, play_mode, accuracy, pp, "
@@ -320,7 +343,7 @@ Task<HttpResponsePtr> aru::users::retreave_best_scores(HttpRequestPtr req, int32
         return false;
     }), scores.end());
 
-    Json::Value response = Json::arrayValue;
+    Json::Value response { Json::arrayValue };
     auto [offset, limit] = aru::utils::paginate(page, length);
 
     if (scores.size() <= offset) {
@@ -391,17 +414,14 @@ Task<HttpResponsePtr> aru::users::retreave_recent_scores(HttpRequestPtr req, int
     auto db = app().getDbClient();
 
     // Verify if user isn't banned or restricted
-    {
-        const auto& result = co_await db->execSqlCoro("SELECT is_public FROM users WHERE id = ? AND is_public = 1;", id);
-        if (result.empty()) {
-            co_return aru::utils::create_error(k404NotFound, "user not found");
-        }
+    if ((co_await db->execSqlCoro("SELECT is_public FROM users WHERE id = ? AND is_public = 1;", id)).empty()) {
+        co_return aru::utils::create_error(k404NotFound, "user not found");
     }
 
     auto [offset, limit] = aru::utils::paginate(page, length);
-    Json::Value scores = Json::arrayValue;
+    Json::Value scores { Json::arrayValue };
 
-    const auto& result = co_await db->execSqlCoro(
+    const auto result = co_await db->execSqlCoro(
         "SELECT scores.id, user_id, hash, ranking, score, scores.max_combo as user_max_combo, full_combo, mods, "
         "count_300, count_100, count_50, count_gekis, count_katus, count_misses, "
         "time, play_mode, accuracy, pp, "
@@ -432,17 +452,14 @@ Task<HttpResponsePtr> aru::users::retreave_first_scores(HttpRequestPtr req, int3
     auto db = app().getDbClient();
 
     // Verify if user isn't banned or restricted
-    {
-        const auto& result = co_await db->execSqlCoro("SELECT is_public FROM users WHERE id = ? AND is_public = 1;", id);
-        if (result.empty()) {
-            co_return aru::utils::create_error(k404NotFound, "user not found");
-        }
+    if ((co_await db->execSqlCoro("SELECT is_public FROM users WHERE id = ? AND is_public = 1;", id)).empty()) {
+        co_return aru::utils::create_error(k404NotFound, "user not found");
     }
     
     auto [offset, limit] = aru::utils::paginate(page, length);
-    Json::Value scores = Json::arrayValue;
+    Json::Value scores { Json::arrayValue };
 
-    const auto& result = co_await db->execSqlCoro(
+    const auto result = co_await db->execSqlCoro(
         "SELECT scores.id, scores.user_id, hash, ranking, score, scores.max_combo as user_max_combo, full_combo, mods, "
         "count_300, count_100, count_50, count_gekis, count_katus, count_misses, "
         "time, scores.play_mode, accuracy, pp, "

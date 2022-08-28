@@ -5,6 +5,7 @@
 #include "convert.hh"
 
 namespace aru {
+
     class config {
     public:
         config(const std::string& frontend_link, const std::string& avatar_folder, const std::vector<std::string>& forbidden_nicknames);
@@ -28,7 +29,7 @@ namespace aru {
 
             auto it = params.find(name);
             if (it == params.end()) {
-                return T{};
+                return T {};
             }
 
             try {
@@ -36,7 +37,7 @@ namespace aru {
             }
             catch (const std::exception& ex) {
                 LOG_ERROR << ex.what();
-                return T{};
+                return T {};
             }
         }
     private:
@@ -57,7 +58,7 @@ namespace aru {
         static uint32_t generate_random_number();
 
         static int64_t get_epoch_time();
-        static int64_t string_to_time(Json::Value time);
+        static int64_t string_to_time(const Json::Value& time);
         static std::string time_to_string(int64_t time);
 
         static std::pair<uint32_t, uint32_t> paginate(uint32_t page, uint32_t length);
@@ -103,4 +104,5 @@ namespace aru {
         static uint64_t get_required_score_for_level(int32_t level);
         static double get_level_precise(uint64_t score);
     };
+
 }

@@ -17,7 +17,7 @@ template <> long long aru::convert::from_string<long long>(const std::string& st
 }
 
 template <> unsigned int aru::convert::from_string<unsigned int>(const std::string& str) {
-    const unsigned long result = std::stoul(str);
+    const auto result = std::stoull(str);
     if (result > std::numeric_limits<unsigned int>::max()) {
         throw std::out_of_range("stou argument out of range");
     }
@@ -50,7 +50,7 @@ template <> bool aru::convert::from_string<bool>(const std::string& str) {
         return true;
     }
 
-    if (str.size() > 4) {
+    if (str.size() != 4) {
         return false;
     }
 

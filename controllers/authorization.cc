@@ -17,7 +17,7 @@ Task<HttpResponsePtr> aru::authorization::authorize_user(HttpRequestPtr req) {
             aru::utils::get_epoch_time(), token_object->token_md5
         );
 
-        Json::Value metadata = Json::objectValue;
+        Json::Value metadata { Json::objectValue };
         metadata["id"] = token_object->id;
 
         auto response = HttpResponse::newHttpJsonResponse(metadata);
@@ -53,11 +53,11 @@ Task<HttpResponsePtr> aru::authorization::authorize_user(HttpRequestPtr req) {
     auto db = drogon::app().getDbClient();
 
     int32_t user_id = 0;
-    std::string password_hash;
-    std::string salt;
+    std::string password_hash {};
+    std::string salt {};
 
     {
-        const auto& result = co_await db->execSqlCoro("SELECT id, password_hash, salt FROM users WHERE username = ? LIMIT 1;", username);
+        const auto result = co_await db->execSqlCoro("SELECT id, password_hash, salt FROM users WHERE username = ? LIMIT 1;", username);
 
         if (result.empty()) {
             co_return aru::utils::create_error(k403Forbidden, "wrong login");
@@ -85,12 +85,12 @@ Task<HttpResponsePtr> aru::authorization::authorize_user(HttpRequestPtr req) {
         user_id, true
     );
 
-    std::string token, md5_token;
+    std::string token {};
     while (true) {
         token = aru::utils::generate_random_string(25);
-        md5_token = aru::utils::create_md5(token);
+        std::string md5_token = aru::utils::create_md5(token);
 
-        const auto& result = co_await db->execSqlCoro("SELECT id FROM tokens WHERE token = ? LIMIT 1;", md5_token);
+        const auto result = co_await db->execSqlCoro("SELECT id FROM tokens WHERE token = ? LIMIT 1;", md5_token);
         if (result.empty()) {
             db->execSqlAsync(
                 "INSERT INTO tokens SET (user_id, token, private, permissions, last_updated) VALUES (?, ?, ?, ?, ?)",
@@ -102,7 +102,7 @@ Task<HttpResponsePtr> aru::authorization::authorize_user(HttpRequestPtr req) {
         }
     }
 
-    Json::Value metadata = Json::objectValue;
+    Json::Value metadata { Json::objectValue };
     metadata["id"] = user_id;
 
     auto response = HttpResponse::newHttpJsonResponse(metadata);
@@ -125,7 +125,7 @@ Task<HttpResponsePtr> aru::authorization::register_user(HttpRequestPtr req) {
         co_return aru::utils::create_error(k400BadRequest, "invalid json body");
     }
 
-    auto request = *body;
+    const auto& request = *body;
 
     if (!request["username"].isString() || !request["password"].isString() || !request["email"].isString()) {
         co_return aru::utils::create_error(k400BadRequest, "missing required information (username, password, email)");
@@ -137,7 +137,7 @@ Task<HttpResponsePtr> aru::authorization::register_user(HttpRequestPtr req) {
     std::string safe_username = username;
     aru::utils::clearify(safe_username);
 
-    static std::regex user_regex("^[A-Za-z0-9 _[\\]-]{2,15}$");
+    static const std::regex user_regex { "^[A-Za-z0-9 _[\\]-]{2,15}$" };
 
     if (!std::regex_search(username, user_regex)) {
         co_return aru::utils::create_error(k403Forbidden, 521, "this nickname contains forbidden symbols. allowed symbols: a-Z 0-9 _[]-");
@@ -158,32 +158,21 @@ Task<HttpResponsePtr> aru::authorization::register_user(HttpRequestPtr req) {
     std::string email = request["email"].asString();
     auto db = drogon::app().getDbClient();
 
-    {
-        const auto& result = co_await db->execSqlCoro("SELECT id FROM users WHERE safe_username = ? OR username = ? LIMIT 1;", safe_username, username);
-        if (!result.empty()) {
-            co_return aru::utils::create_error(k403Forbidden, 524, "this nickname already taken");
-        }
+    if (!(co_await db->execSqlCoro("SELECT id FROM users WHERE safe_username = ? OR username = ? LIMIT 1;", safe_username, username)).empty()) {
+        co_return aru::utils::create_error(k403Forbidden, 524, "this nickname already taken");
     }
 
-    {
-        const auto& result = co_await db->execSqlCoro("SELECT id FROM users WHERE email = ? LIMIT 1;", email);
-        if (!result.empty()) {
-            co_return aru::utils::create_error(k403Forbidden, 525, "this email already taken");
-        }
+    if (!(co_await db->execSqlCoro("SELECT id FROM users WHERE email = ? LIMIT 1;", email)).empty()) {
+        co_return aru::utils::create_error(k403Forbidden, 525, "this email already taken");
     }
 
     std::string salt = aru::utils::generate_random_string(24);
     std::string password = aru::utils::create_sha512(aru::utils::create_md5(request["password"].asString()), salt);
-    int32_t user_id = 0;
-
-    {
-        const auto& result = co_await db->execSqlCoro(
-            "INSERT INTO users (username, safe_username, country, email, password_hash, salt, ip, registration_date, roles) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            username, safe_username, "XX", email, password, salt, req->getPeerAddr().toIp(), aru::utils::get_epoch_time(), 0
-        );
-        user_id = result.insertId();
-    }
+    int32_t user_id = (co_await db->execSqlCoro(
+        "INSERT INTO users (username, safe_username, country, email, password_hash, salt, ip, registration_date, roles) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        username, safe_username, "XX", email, password, salt, req->getPeerAddr().toIp(), aru::utils::get_epoch_time(), 0
+    )).insertId();
 
     db->execSqlAsync(
         "INSERT INTO users_stats (id) VALUES (?);",
@@ -204,12 +193,12 @@ Task<HttpResponsePtr> aru::authorization::register_user(HttpRequestPtr req) {
         user_id
     );
 
-    std::string token, md5_token;
+    std::string token {};
     while (true) {
         token = aru::utils::generate_random_string(25);
-        md5_token = aru::utils::create_md5(token);
+        std::string md5_token = aru::utils::create_md5(token);
 
-        const auto& result = co_await db->execSqlCoro("SELECT id FROM tokens WHERE token = ? LIMIT 1;", md5_token);
+        const auto result = co_await db->execSqlCoro("SELECT id FROM tokens WHERE token = ? LIMIT 1;", md5_token);
         if (result.empty()) {
             db->execSqlAsync(
                 "INSERT INTO tokens SET (user_id, token, private, permissions, last_updated) VALUES (?, ?, ?, ?, ?);",
@@ -221,7 +210,7 @@ Task<HttpResponsePtr> aru::authorization::register_user(HttpRequestPtr req) {
         }
     }
 
-    Json::Value metadata = Json::objectValue;
+    Json::Value metadata { Json::objectValue };
     metadata["id"] = user_id;
 
     auto response = HttpResponse::newHttpJsonResponse(metadata);

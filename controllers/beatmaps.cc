@@ -4,7 +4,7 @@
 
 Task<HttpResponsePtr> aru::beatmaps::retreave_beatmapset(HttpRequestPtr req, int32_t id) {
     auto db = app().getDbClient();
-    const auto& result = co_await db->execSqlCoro(
+    const auto result = co_await db->execSqlCoro(
         "SELECT beatmap_id, beatmapset_id, beatmap_md5, "
         "artist, title, difficulty_name, creator, "
         "count_normal, count_slider, count_spinner, "
@@ -13,14 +13,14 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmapset(HttpRequestPtr req, int
         "mode, cs, ar, od, hp "
         "FROM beatmaps WHERE beatmapset_id = ? LIMIT 1;", id
     );
-    Json::Value beatmaps = Json::arrayValue;
+    Json::Value beatmaps { Json::arrayValue };
 
     if (result.empty()) {
         co_return HttpResponse::newHttpJsonResponse(beatmaps);
     }
 
     for (const auto& row : result) {
-        Json::Value beatmap = Json::objectValue;
+        Json::Value beatmap { Json::objectValue } ;
 
         beatmap["beatmap_id"]       = row["beatmap_id"].as<int32_t>();
         beatmap["beatmapset_id"]    = row["beatmapset_id"].as<int32_t>();
@@ -73,7 +73,7 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmapset(HttpRequestPtr req, int
 
 Task<HttpResponsePtr> aru::beatmaps::retreave_beatmap(HttpRequestPtr req, int32_t id) {
     auto db = app().getDbClient();
-    const auto& result = co_await db->execSqlCoro(
+    const auto result = co_await db->execSqlCoro(
         "SELECT beatmap_id, beatmapset_id, beatmap_md5, "
         "artist, title, difficulty_name, creator, "
         "count_normal, count_slider, count_spinner, "
@@ -82,7 +82,7 @@ Task<HttpResponsePtr> aru::beatmaps::retreave_beatmap(HttpRequestPtr req, int32_
         "mode, cs, ar, od, hp "
         "FROM beatmaps WHERE beatmap_id = ? LIMIT 1;", id
     );
-    Json::Value beatmap = Json::objectValue;
+    Json::Value beatmap { Json::objectValue };
 
     if (result.empty()) {
         co_return aru::utils::create_error(k404NotFound, "beatmap not found");
@@ -144,11 +144,10 @@ Task<HttpResponsePtr> aru::beatmaps::beatmap_leaderboard(HttpRequestPtr req, int
     }
 
     auto db = app().getDbClient();
-    std::string beatmap_md5;
+    std::string beatmap_md5 {};
 
-    // Poping database query out of common context, so we can reuse variables
     {
-        const auto& result = co_await db->execSqlCoro("SELECT beatmap_md5 FROM beatmaps WHERE beatmap_id = ? LIMIT 1;", id);
+        const auto result = co_await db->execSqlCoro("SELECT beatmap_md5 FROM beatmaps WHERE beatmap_id = ? LIMIT 1;", id);
 
         if (result.empty()) {
             co_return aru::utils::create_error(k404NotFound, "beatmap not found");
@@ -158,7 +157,7 @@ Task<HttpResponsePtr> aru::beatmaps::beatmap_leaderboard(HttpRequestPtr req, int
         beatmap_md5 = row["beatmap_md5"].as<std::string>();
     }
 
-    const auto& result = co_await db->execSqlCoro(
+    const auto result = co_await db->execSqlCoro(
         "SELECT user_id, ranking, username, country, "
         "hash, score, pp, accuracy, count_300, count_100, count_50, count_misses, max_combo, mods "
         "FROM scores JOIN users ON scores.user_id = users.id "
@@ -167,8 +166,8 @@ Task<HttpResponsePtr> aru::beatmaps::beatmap_leaderboard(HttpRequestPtr req, int
     );
 
     if (result.empty()) {
-        Json::Value leaderboard_ = Json::arrayValue;
-        co_return HttpResponse::newHttpJsonResponse(leaderboard_);
+        Json::Value leaderboard { Json::arrayValue };
+        co_return HttpResponse::newHttpJsonResponse(leaderboard);
     }
 
     std::vector<leaderboard_beatmap> leaderboard {};
@@ -208,7 +207,7 @@ Task<HttpResponsePtr> aru::beatmaps::beatmap_leaderboard(HttpRequestPtr req, int
         return false;
     }), leaderboard.end());
 
-    Json::Value response = Json::arrayValue;
+    Json::Value response { Json::arrayValue };
     auto [offset, limit] = aru::utils::paginate(page, length);
 
     if (leaderboard.size() <= offset) {

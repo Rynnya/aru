@@ -7,7 +7,7 @@
 #include <iomanip>
 
 aru::config* aru::config::instance = nullptr;
-std::once_flag aru::config::once{};
+std::once_flag aru::config::once {};
 
 drogon::HttpResponsePtr aru::utils::no_content_container = nullptr;
 
@@ -57,7 +57,7 @@ const drogon::HttpResponsePtr aru::utils::no_content() {
 }
 
 drogon::HttpResponsePtr aru::utils::create_error(const drogon::HttpStatusCode& code_, const std::string& reason_) {
-    Json::Value object = Json::objectValue;
+    Json::Value object { Json::objectValue };
     object["message"] = reason_;
 
     auto response = drogon::HttpResponse::newHttpJsonResponse(object);
@@ -67,7 +67,7 @@ drogon::HttpResponsePtr aru::utils::create_error(const drogon::HttpStatusCode& c
 }
 
 drogon::HttpResponsePtr aru::utils::create_error(const drogon::HttpStatusCode& code_, int32_t internal_code_, const std::string& reason_) {
-    Json::Value object = Json::objectValue;
+    Json::Value object { Json::objectValue };
     object["code"] = internal_code_;
     object["message"] = reason_;
 
@@ -121,7 +121,7 @@ std::string aru::utils::create_sha512(const std::string& input_, const std::stri
 }
 
 std::string aru::utils::generate_random_string(int32_t size_) {
-    std::string result;
+    std::string result {};
     result.reserve(size_);
 
     static const char alphanum[] =
@@ -147,7 +147,7 @@ int64_t aru::utils::get_epoch_time() {
     return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-int64_t aru::utils::string_to_time(Json::Value time_) {
+int64_t aru::utils::string_to_time(const Json::Value& time_) {
     if (!time_.isString()) {
         return std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()).time_since_epoch().count();
     }

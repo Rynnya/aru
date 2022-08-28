@@ -14,10 +14,7 @@ drogon::HttpResponsePtr error_handler(drogon::HttpStatusCode code) {
 void default_handler(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr &)>&& callback) {
     auto response = drogon::HttpResponse::newHttpResponse();
     response->setContentTypeCodeAndCustomString(drogon::ContentType::CT_TEXT_PLAIN, "text/plain; charset=utf-8");
-    response->setBody(
-        "aru, yukime backend api\n"
-        "source code: https://github.com/Rynnya/aru"
-    );
+    response->setBody("aru, yukime backend api\nsource code: https://github.com/Rynnya/aru");
     callback(response);
 };
 
