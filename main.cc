@@ -22,6 +22,14 @@ void favicon_handler(const drogon::HttpRequestPtr& req, std::function<void(const
     callback(aru::utils::no_content());
 }
 
+drogon::HttpResponsePtr options_handler(const drogon::HttpRequestPtr& req) {
+    if (req->getMethod() == drogon::HttpMethod::Options) {
+        return aru::utils::options();
+    }
+
+    return nullptr;
+}
+
 void cors_handler(const drogon::HttpRequestPtr& req, const drogon::HttpResponsePtr& resp) {
     resp->addHeader("Access-Control-Allow-Origin", "*");
 }
@@ -36,6 +44,7 @@ int main() {
     drogon::app()
         .setFloatPrecisionInJson(2, "decimal")
         .registerBeginningAdvice(main_callback)
+        .registerSyncAdvice(options_handler)
         .registerPostHandlingAdvice(cors_handler)
         .setCustomErrorHandler(error_handler)
         .setDefaultHandler(default_handler)

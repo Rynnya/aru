@@ -119,6 +119,9 @@ Task<HttpResponsePtr> aru::authorization::authorize_user(HttpRequestPtr req) {
 }
 
 Task<HttpResponsePtr> aru::authorization::register_user(HttpRequestPtr req) {
+    // TODO: Transaction required to create user properly
+    // It's must be in 2 states only -> fully created or not created at all
+
     std::shared_ptr<Json::Value> body = req->getJsonObject();
 
     if (body == nullptr) {

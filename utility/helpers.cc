@@ -44,6 +44,10 @@ aru::config::config(const std::string& frontend_link_, const std::string& avatar
         aru::utils::no_content_container->setStatusCode(drogon::k204NoContent);
         aru::utils::no_content_container->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 
+        aru::utils::options_container = drogon::HttpResponse::newHttpResponse();
+        aru::utils::options_container->addHeader("Access-Control-Allow-Origin", "*");
+        aru::utils::options_container->addHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+
         instance = this;
     });
 }
@@ -52,8 +56,12 @@ const aru::config* aru::config::get() {
     return instance;
 }
 
-const drogon::HttpResponsePtr aru::utils::no_content() {
+const drogon::HttpResponsePtr& aru::utils::no_content() {
     return aru::utils::no_content_container;
+}
+
+const drogon::HttpResponsePtr& aru::utils::options() {
+    return aru::utils::options_container;
 }
 
 drogon::HttpResponsePtr aru::utils::create_error(const drogon::HttpStatusCode& code_, const std::string& reason_) {

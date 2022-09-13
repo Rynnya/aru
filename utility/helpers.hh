@@ -42,8 +42,11 @@ namespace aru {
         }
     private:
         static drogon::HttpResponsePtr no_content_container;
+        static drogon::HttpResponsePtr options_container;
+
     public:
-        static const drogon::HttpResponsePtr no_content();
+        static const drogon::HttpResponsePtr& no_content();
+        static const drogon::HttpResponsePtr& options();
         static drogon::HttpResponsePtr create_error(const drogon::HttpStatusCode& code, const std::string& reason);
         static drogon::HttpResponsePtr create_error(const drogon::HttpStatusCode& code, int32_t internal_code, const std::string& reason);
 
