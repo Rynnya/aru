@@ -48,6 +48,10 @@ aru::config::config(const std::string& frontend_link_, const std::string& avatar
         aru::utils::options_container = drogon::HttpResponse::newHttpResponse();
         aru::utils::options_container->addHeader("Access-Control-Allow-Origin", "*");
         aru::utils::options_container->addHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+        aru::utils::options_container->addHeader(
+            "Access-Control-Allow-Headers", 
+            "Accept, Accept-CH, Accept-Charset, Authorization, Age, Content-Encoding, Content-Length, Content-Type, User-Agent"
+        );
 
         instance = this;
     });
