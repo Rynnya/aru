@@ -75,6 +75,7 @@ drogon::HttpResponsePtr aru::utils::create_error(const drogon::HttpStatusCode& c
 
     auto response = drogon::HttpResponse::newHttpJsonResponse(object);
     response->setStatusCode(code_);
+    response->addHeader("Access-Control-Allow-Origin", "*");
 
     return response;
 }
