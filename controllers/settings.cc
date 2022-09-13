@@ -163,6 +163,7 @@ Task<HttpResponsePtr> aru::settings::perform_avatar(HttpRequestPtr req, int32_t 
     avatar << new_avatar;
     avatar.close();
 
+    co_await drogon::app().getRedisClient()->execCommandCoro("PUBLISH aru.change_avatar %i", id);
     co_return aru::utils::no_content();
 }
 

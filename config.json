@@ -16,10 +16,21 @@
         "number_of_connections": 32,
         "timeout": -1.0
     }],
+    "redis_clients": [{
+        "host": "127.0.0.1",
+        "port": 6379,
+        "passwd": "",
+        "db": 0,
+        "is_fast": false,
+        "number_of_connections": 4,
+        "timeout": -1.0
+    }],
     "custom_config": {
         "osu_api_key": "",
         "osu_username": "",
         "osu_password": "",
+        "frontend_link": "yukime.ml",
+        "avatar_folder": "/path/to/folder",
         "preferred_memory_usage": 2048,
         "max_memory_usage": 4096,
         "beatmap_timeout": 1200,
