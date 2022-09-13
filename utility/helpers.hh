@@ -22,6 +22,7 @@ namespace aru {
 
     class utils {
         friend class config;
+
     private:
         template <typename T>
         static T get_parameter(const std::unordered_map<std::string, std::string>& params, const std::string& name) {
@@ -40,7 +41,7 @@ namespace aru {
                 return T {};
             }
         }
-    private:
+
         static drogon::HttpResponsePtr no_content_container;
         static drogon::HttpResponsePtr options_container;
 

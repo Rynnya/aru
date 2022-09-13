@@ -10,6 +10,7 @@ aru::config* aru::config::instance = nullptr;
 std::once_flag aru::config::once {};
 
 drogon::HttpResponsePtr aru::utils::no_content_container = nullptr;
+drogon::HttpResponsePtr aru::utils::options_container = nullptr;
 
 constexpr uint64_t score_to_level[100] = {
         0, 30000, 130000, 340000, 700000,
